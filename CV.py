@@ -160,6 +160,36 @@ with open(tflite_quant_model_path, 'wb') as f:
     f.write(tflite_quant_model)
 
 
+
+# Load the test dataset
+test_ds = tf.keras.utils.image_dataset_from_directory(
+    test_dir,
+    image_size=(IMG_HEIGHT, IMG_WIDTH),
+    batch_size=BATCH_SIZE,
+    shuffle=False) # No need to shuffle for evaluation
+
+# Apply the same preprocessing as the validation set
+test_ds = test_ds.map(lambda x, y: (tf.keras.applications.mobilenet_v2.preprocess_input(x), y),
+                      num_parallel_calls=tf.data.AUTOTUNE)
+test_ds = test_ds.prefetch(buffer_size=tf.data.AUTOTUNE)
+
+# Load your final models
+full_model = tf.keras.models.load_model('traffic_sign_model_full.h5')
+pruned_model = tf.keras.models.load_model('traffic_sign_model_pruned.h5')
+
+print("\n--- Final Model Performance on Unseen Test Data ---")
+
+# Evaluate the original, full model
+loss_full, accuracy_full = full_model.evaluate(test_ds)
+print(f"Original Full Model -> Test Accuracy: {accuracy_full*100:.2f}%")
+
+# Evaluate the final, pruned model
+loss_pruned, accuracy_pruned = pruned_model.evaluate(test_ds)
+print(f"Final Pruned Model -> Test Accuracy: {accuracy_pruned*100:.2f}%")
+
+
+
+
 # final Comparison
 print("\n--- Model Comparison ---")
 full_model_size = os.path.getsize('traffic_sign_model_full.h5') / (1024 * 1024)
